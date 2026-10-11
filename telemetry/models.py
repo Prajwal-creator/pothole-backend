@@ -44,5 +44,10 @@ class Telemetry(models.Model):
         auto_now_add=True
     )
 
+    last_seen = models.DateTimeField(
+    null=True,
+    blank=True
+    )
+
     def __str__(self):
         return f"{self.device.device_id} - {self.created_at}"

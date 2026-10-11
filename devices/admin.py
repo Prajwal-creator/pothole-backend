@@ -7,8 +7,14 @@ class DeviceAdmin(admin.ModelAdmin):
         'device_id',
         'name',
         'is_active',
+        'online_status',
         'created_at',
         'last_seen',
+        'battery_percent',
+        'wifi_rssi',
+        'gps_connected',
+        'mpu6050_connected',
+       'camera_connected'
     )
 
     search_fields = (
@@ -20,4 +26,10 @@ class DeviceAdmin(admin.ModelAdmin):
         'is_active',
     )
 
-# Register your models here.
+    readonly_fields = ("online_status",)
+
+    @admin.display(description="Online Status", boolean=True)
+    def online_status(self, obj):
+
+
+         return obj.is_online
