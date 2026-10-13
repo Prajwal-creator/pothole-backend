@@ -8,6 +8,8 @@ from .models import Pothole
 from .serializers import PotholeSerializer
 from .utils import rgb565_to_jpeg
 from rest_framework.parsers import MultiPartParser, FormParser
+import hashlib
+import hmac
 
 
 class PotholeDetectView(APIView):
@@ -87,15 +89,17 @@ class PotholeDetectView(APIView):
         # CHECK TOKEN
         # ==================================================
 
-        if device.device_token != device_token:
-
+        provided_hash = hashlib.sha256(device_token.encode("utf-8")).hexdigest()
+        if not hmac.compare_digest(provided_hash,device.device_token_hash):
             return Response(
                 {
-                    "success": False,
-                    "error": "Invalid device token"
+                   "success": False,
+                   "error": "Invalid device token"
                 },
-                status=status.HTTP_401_UNAUTHORIZED
+                     status=status.HTTP_401_UNAUTHORIZED
             )
+
+    
 
         # ==================================================
         # GET IMAGE
@@ -169,12 +173,16 @@ class PotholeDetectView(APIView):
 
         try:
 
-            jpeg_file = rgb565_to_jpeg(
-                raw_image,
-                width,
-                height,
-                quality=85
-            )
+           jpeg_file = rgb565_to_jpeg(
+           raw_data=raw_image,
+           width=int(width),
+           height=int(height),
+           quality=85,
+           byte_order="big",
+           )
+
+           jpeg_file.seek(0)
+           
 
         except Exception as e:
 

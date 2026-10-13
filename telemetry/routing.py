@@ -1,18 +1,30 @@
+
 from django.urls import re_path
 
-from .consumers import DeviceTelemetryConsumer
-from .middleware import DeviceAuthMiddleware
+from telemetry.consumers import (
+    DeviceTelemetryConsumer,
+    DashboardTelemetryConsumer,
+)
+from telemetry.middleware import (
+    DeviceAuthMiddleware,
+    DashboardJWTAuthMiddleware,
+)
 
 
 websocket_urlpatterns = [
-
+    # ESP32 uploads telemetry using the device token.
     re_path(
-        r"ws/devices/(?P<device_id>[^/]+)/telemetry/$",
-
+        r"^ws/devices/(?P<device_id>[^/]+)/telemetry/$",
         DeviceAuthMiddleware(
             DeviceTelemetryConsumer.as_asgi()
         ),
-
     ),
 
+    # React receives live data using the user's JWT.
+    re_path(
+        r"^ws/dashboard/devices/(?P<device_id>[^/]+)/telemetry/$",
+        DashboardJWTAuthMiddleware(
+            DashboardTelemetryConsumer.as_asgi()
+        ),
+    ),
 ]

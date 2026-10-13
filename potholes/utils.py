@@ -6,63 +6,65 @@ def rgb565_to_jpeg(
     raw_data,
     width,
     height,
-    quality=85
+    quality=85,
+    byte_order="little",
 ):
     """
-    Convert raw RGB565 bytes into JPEG.
+    Convert raw RGB565 bytes to JPEG.
 
-    Expected:
-        width  = 240
-        height = 240
+    Args:
+        raw_data: Raw RGB565 image bytes.
+        width: Actual frame width.
+        height: Actual frame height.
+        quality: JPEG quality from 1 to 95.
+        byte_order: "little" or "big".
 
-    RGB565:
-        16 bits / pixel
-        2 bytes / pixel
+    Returns:
+        BytesIO containing the JPEG image.
     """
+
+    if width <= 0 or height <= 0:
+        raise ValueError("Width and height must be positive")
 
     expected_size = width * height * 2
 
     if len(raw_data) != expected_size:
         raise ValueError(
-            f"Invalid RGB565 size. "
-            f"Expected {expected_size}, "
-            f"received {len(raw_data)}"
+            f"Invalid RGB565 size: expected {expected_size} "
+            f"bytes for {width}x{height}, "
+            f"received {len(raw_data)} bytes"
         )
 
-    rgb = bytearray(
-        width * height * 3
-    )
+    if byte_order not in ("little", "big"):
+        raise ValueError("byte_order must be 'little' or 'big'")
 
+    # Interpret each pair of bytes as one RGB565 pixel.
+    rgb = bytearray(width * height * 3)
     out = 0
 
-    for i in range(0, len(raw_data), 2):
+    for i in range(0, expected_size, 2):
 
-        # ESP32 RGB565 byte order
-        value = (
-            raw_data[i]
-            | (raw_data[i + 1] << 8)
-        )
+        if byte_order == "little":
+            value = raw_data[i] | (raw_data[i + 1] << 8)
+        else:
+            value = (raw_data[i] << 8) | raw_data[i + 1]
 
-        # RGB565
+        # Extract RGB565 channels.
         r = (value >> 11) & 0x1F
         g = (value >> 5) & 0x3F
         b = value & 0x1F
 
-        # Convert to 8-bit RGB
-        r = (r * 255) // 31
-        g = (g * 255) // 63
-        b = (b * 255) // 31
-
-        rgb[out] = r
-        rgb[out + 1] = g
-        rgb[out + 2] = b
+        # Expand channels to 8-bit RGB.
+        rgb[out] = (r * 255) // 31
+        rgb[out + 1] = (g * 255) // 63
+        rgb[out + 2] = (b * 255) // 31
 
         out += 3
 
     image = Image.frombytes(
         "RGB",
         (width, height),
-        bytes(rgb)
+        bytes(rgb),
     )
 
     output = BytesIO()
@@ -70,9 +72,8 @@ def rgb565_to_jpeg(
     image.save(
         output,
         format="JPEG",
-        quality=quality
+        quality=quality,
     )
 
     output.seek(0)
-
     return output

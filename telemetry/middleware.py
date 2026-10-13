@@ -1,106 +1,162 @@
+
 import hashlib
+import hmac
 from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
-from devices.models import Device
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
+from .models import Device
 
 
 class DeviceAuthMiddleware:
+    """
+    ESP32 authentication.
+
+    Supports:
+      Authorization: Token <device_token>
+    or:
+      ?token=<device_token>
+    """
 
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-
-        print("================================")
-        print("DEVICE WEBSOCKET AUTH")
-        print("PATH:", scope.get("path"))
-        print("URL ROUTE:", scope.get("url_route"))
-        print("================================")
-
+        scope = dict(scope)
         scope["device"] = None
 
-        # 1. Get device ID from URL routing
         try:
             device_id = scope["url_route"]["kwargs"]["device_id"]
         except (KeyError, TypeError):
-            print("ERROR: device_id not found")
-            return await self.close_connection(send, 4001)
+            await self.close_connection(send, 4001)
+            return
 
-        # 2. Try Authorization header first (ESP32/header clients)
         headers = dict(scope.get("headers", []))
         auth_header = headers.get(b"authorization")
-
         raw_token = None
-        auth_method = None
 
         if auth_header:
             try:
                 auth_header = auth_header.decode("utf-8")
             except UnicodeDecodeError:
-                print("ERROR: Invalid authorization encoding")
-                return await self.close_connection(send, 4001)
+                await self.close_connection(send, 4001)
+                return
 
             if not auth_header.startswith("Token "):
-                print("ERROR: Expected Authorization: Token <token>")
-                return await self.close_connection(send, 4001)
+                await self.close_connection(send, 4001)
+                return
 
             raw_token = auth_header[6:].strip()
-            auth_method = "Authorization header"
 
         else:
-            # 3. If header is absent, try React's URL query parameter
-            query_string = scope.get("query_string", b"").decode(
-                "utf-8", errors="replace"
-            )
+            query_string = scope.get(
+                "query_string", b""
+            ).decode("utf-8", errors="replace")
+
             params = parse_qs(query_string)
             raw_token = params.get("token", [None])[0]
-            auth_method = "URL query parameter"
 
-        # 4. Reject missing or empty token
         if not raw_token:
-            print("ERROR: No valid token supplied")
-            return await self.close_connection(send, 4001)
+            await self.close_connection(send, 4001)
+            return
 
-        print("Authentication method:", auth_method)
-        print("Authenticating device:", device_id)
-
-        # 5. Validate the same token using your existing SHA-256 logic
-        device = await self.authenticate_device(device_id, raw_token)
+        device = await self.authenticate_device(
+            device_id, raw_token
+        )
 
         if device is None:
-            print("ERROR: Device authentication failed")
-            return await self.close_connection(send, 4003)
+            await self.close_connection(send, 4003)
+            return
 
-        # 6. Authentication successful
         scope["device"] = device
-
-        print("SUCCESS: Device authenticated:", device.device_id)
-
-        # 7. Continue to the WebSocket consumer
         return await self.app(scope, receive, send)
 
     @database_sync_to_async
     def authenticate_device(self, device_id, raw_token):
-
         try:
             device = Device.objects.get(device_id=device_id)
         except Device.DoesNotExist:
-            print("Device does not exist:", device_id)
             return None
 
         if not device.is_active:
-            print("Device is inactive:", device_id)
+            return None
+
+        if not device.device_token_hash:
             return None
 
         token_hash = hashlib.sha256(
             raw_token.encode("utf-8")
         ).hexdigest()
 
-        if token_hash != device.device_token_hash:
-            print("Token hash mismatch")
+        if not hmac.compare_digest(
+            token_hash, device.device_token_hash
+        ):
             return None
 
         return device
+
+    async def close_connection(self, send, code):
+        await send({
+            "type": "websocket.close",
+            "code": code,
+        })
+
+
+class DashboardJWTAuthMiddleware:
+    """
+    React dashboard authentication using a Django user JWT.
+
+    URL:
+      /ws/dashboard/devices/<device_id>/telemetry/?token=<user_jwt>
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        scope = dict(scope)
+        scope["user"] = AnonymousUser()
+
+        query_string = scope.get(
+            "query_string", b""
+        ).decode("utf-8", errors="replace")
+
+        params = parse_qs(query_string)
+        raw_token = params.get("token", [None])[0]
+
+        if not raw_token:
+            await self.close_connection(send, 4001)
+            return
+
+        try:
+            user = await self.get_user(raw_token)
+        except Exception as exc:
+            # Never log the actual JWT.
+            print(
+                "Dashboard JWT rejected:",
+                type(exc).__name__,
+            )
+            await self.close_connection(send, 4001)
+            return
+
+        if not user or not user.is_active:
+            await self.close_connection(send, 4003)
+            return
+
+        scope["user"] = user
+
+        return await self.app(scope, receive, send)
+
+    @database_sync_to_async
+    def get_user(self, raw_token):
+        validated_token = JWTAuthentication().get_validated_token(
+            raw_token
+        )
+
+        return JWTAuthentication().get_user(validated_token)
 
     async def close_connection(self, send, code):
         await send({
