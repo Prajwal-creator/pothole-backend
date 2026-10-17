@@ -1,4 +1,3 @@
-
 from django.urls import re_path
 
 from telemetry.consumers import (
@@ -10,6 +9,7 @@ from telemetry.middleware import (
     DashboardJWTAuthMiddleware,
 )
 
+from potholes.consumers import CameraConsumer
 
 websocket_urlpatterns = [
     # ESP32 uploads telemetry using the device token.
@@ -26,5 +26,10 @@ websocket_urlpatterns = [
         DashboardJWTAuthMiddleware(
             DashboardTelemetryConsumer.as_asgi()
         ),
+    ),
+
+    re_path(
+        r"^ws/camera/(?P<device_id>[^/]+)/$",
+        CameraConsumer.as_asgi(),
     ),
 ]

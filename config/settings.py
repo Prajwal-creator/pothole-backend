@@ -158,8 +158,8 @@ MAILERS = {
         "OPTIONS": {
             "host": "smtp.gmail.com",
             "port": 587,
-            "username": "prajwalgoutham962@gmail.com",
-            "password": "uuccmhuostemehnk",
+            "username": "your_gmail",
+            "password": "your_gmail_app_password",
             "use_tls": True,
             "timeout": 10,
         },

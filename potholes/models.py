@@ -71,6 +71,13 @@ class Pothole(models.Model):
         default=0
     )
 
+    is_pothole = models.BooleanField(default=False)
+
+    label = models.CharField(
+        max_length=30,
+        default="no_pothole"
+    )
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
