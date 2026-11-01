@@ -39,6 +39,7 @@ class PotholeSerializer(serializers.ModelSerializer):
             "ay",
             "az",
 
+            "is_pothole",
             "severity",
             "confidence",
             "status",

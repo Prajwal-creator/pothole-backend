@@ -1,9 +1,19 @@
 
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 
 class Device(models.Model):
+
+    created_by = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="created_devices"
+       )
+
     device_id = models.CharField(
         max_length=100,
         unique=True

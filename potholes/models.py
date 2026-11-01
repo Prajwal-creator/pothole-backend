@@ -88,6 +88,7 @@ class Pothole(models.Model):
         auto_now_add=True
     )
 
+
     class Meta:
         ordering = ["-detected_at"]
 

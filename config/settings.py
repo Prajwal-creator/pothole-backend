@@ -1,4 +1,5 @@
 from pathlib import Path
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,12 +19,41 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "10.108.62.207",
     "10.76.140.207",
+    "testserver",
+    "nicole-everywhere-posing-appearing.trycloudflare.com",
+    "enterprises-decades-leslie-there.trycloudflare.com",
+    "roadguard-ai-1.vercel.app",
+    "roadguard-ai-live-monitor.vercel.app",
+    "likewise-messages-comedy-dietary.trycloudflare.com",
+    "roadguardaiwebsite.vercel.app",
+    "roadguard-ai-live-detection.vercel.app",
+    "products-fort-tribute-collective.trycloudflare.com",
+    "roadguard-ai-2.vercel.app",
+    "roadguard-ai-3.vercel.app",
+    "lived-kissing-canyon-openings.trycloudflare.com",
 ]
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://10.108.62.207:5173",
     "http://127.0.0.1:5173",
+    "https://nicole-everywhere-posing-appearing.trycloudflare.com",
+    "https://enterprises-decades-leslie-there.trycloudflare.com",
+    "https://roadguard-ai-1.vercel.app",
+    "https://likewise-messages-comedy-dietary.trycloudflare.com",
+    "https://roadguard-ai-live-detection.vercel.app",
+    "https://products-fort-tribute-collective.trycloudflare.com",
+    "https://roadguard-ai-2.vercel.app",
+    "https://roadguard-ai-3.vercel.app",
+    "https://lived-kissing-canyon-openings.trycloudflare.com",
+]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "device-id",
+    "device-token",
+    "Android-Device-ID",
+    "Android-Device-Token",
 ]
 #authentication prajwal created
 REST_FRAMEWORK = {
@@ -53,11 +83,6 @@ INSTALLED_APPS = [
     'channels',
 ]
 
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
 
 
 MIDDLEWARE = [
@@ -158,8 +183,8 @@ MAILERS = {
         "OPTIONS": {
             "host": "smtp.gmail.com",
             "port": 587,
-            "username": "your_gmail",
-            "password": "your_gmail_app_password",
+            "username": "prajwalgoutham962@gmail.com",
+            "password": "uuccmhuostemehnk",
             "use_tls": True,
             "timeout": 10,
         },

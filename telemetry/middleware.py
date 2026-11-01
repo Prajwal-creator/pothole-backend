@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-
 from .models import Device
 
 
@@ -37,6 +36,7 @@ class DeviceAuthMiddleware:
         headers = dict(scope.get("headers", []))
         auth_header = headers.get(b"authorization")
         raw_token = None
+        print(auth_header)
 
         if auth_header:
             try:
@@ -48,7 +48,7 @@ class DeviceAuthMiddleware:
             if not auth_header.startswith("Token "):
                 await self.close_connection(send, 4001)
                 return
-
+            
             raw_token = auth_header[6:].strip()
 
         else:
@@ -123,6 +123,8 @@ class DashboardJWTAuthMiddleware:
         query_string = scope.get(
             "query_string", b""
         ).decode("utf-8", errors="replace")
+        print("Path:", scope.get("path"))
+        print("Query parameters present:", bool(query_string))
 
         params = parse_qs(query_string)
         raw_token = params.get("token", [None])[0]

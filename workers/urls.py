@@ -9,6 +9,8 @@ from .views import (
     WorkerVerifyOTPView,
     WorkerSetPasswordView,
 )
+from .views import WorkerLoginView
+from .views import WorkerMeView
 
 
 urlpatterns = [
@@ -55,4 +57,15 @@ urlpatterns = [
         WorkerSetPasswordView.as_view(),
         name='worker-set-password'
     ),
+    path(
+        "auth/login/",
+        WorkerLoginView.as_view(),
+        name="worker-login",
+    ),
+    path(
+    "auth/me/",
+    WorkerMeView.as_view(),
+    name="worker-me",
+    ),
+    
 ]

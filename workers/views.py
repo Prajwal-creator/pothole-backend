@@ -19,6 +19,10 @@ from rest_framework.permissions import (
 )
 from .models import Worker, WorkerInvitation
 from .serializers import WorkerSerializer
+from django.contrib.auth import authenticate
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import WorkerLoginSerializer
 
 
 User = get_user_model()
@@ -77,6 +81,8 @@ class WorkerCreateView(APIView):
             email=email
         ).exists():
 
+            print(User.objects.filter(email=email).exists())
+ 
             return Response(
                 {
                     'message': (
@@ -807,3 +813,89 @@ class WorkerSetPasswordView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+class WorkerLoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = WorkerLoginSerializer(data=request.data)
+        print(serializer)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"].strip().lower()
+        password = serializer.validated_data["password"]
+
+        user = authenticate(
+            request,
+            email=email,
+            password=password,
+        )
+
+        if user is None or not user.is_active:
+            return Response(
+                {"detail": "Invalid email or password."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Do not allow admin accounts to use worker login.
+        if user.is_staff or user.is_superuser:
+            return Response(
+                {"detail": "Use the admin login portal."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            worker = user.worker_profile
+        except Exception:
+            worker = None
+
+        if worker is None:
+            return Response(
+                {"detail": "This account is not a worker account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if worker.status != "ACTIVE":
+            return Response(
+                {"detail": "Your worker account is not active."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "message": "Worker login successful.",
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "employee_id": worker.employee_id,
+                    "role": "worker",
+                    "status": worker.status,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+class WorkerMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            worker = Worker.objects.get(user=request.user)
+        except Worker.DoesNotExist:
+            return Response(
+                {"detail": "Worker profile not found."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return Response({
+            "id": request.user.pk,
+            "email": request.user.email,
+            "role": "worker",
+            "employee_id": worker.employee_id,
+        })

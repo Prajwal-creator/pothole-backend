@@ -24,3 +24,12 @@ class WorkerSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+
+
+class WorkerLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        write_only=True,
+        trim_whitespace=False,
+        max_length=128,
+    )

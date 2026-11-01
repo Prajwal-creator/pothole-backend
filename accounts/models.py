@@ -45,6 +45,14 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20)
 
+    created_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_users"
+    )
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
